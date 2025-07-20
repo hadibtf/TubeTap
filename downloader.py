@@ -7,11 +7,8 @@ logging.basicConfig(level=logging.INFO)
 
 def download_video(url, format='mp4'):
     """Downloads a video from a given URL and converts it to the specified format."""
-    ydl_opts = {
-        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-        'outtmpl': '%(id)s.%(ext)s',
-        'noplaylist': True,
-    }
+    ydl_opts = {'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best', 'outtmpl': '%(id)s.%(ext)s',
+                'noplaylist': True, "cookiefile": "cookies.txt"}
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info_dict = ydl.extract_info(url, download=False)
