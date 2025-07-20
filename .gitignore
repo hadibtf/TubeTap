@@ -1,4 +1,7 @@
 /cookies.txt
+/prompt.txt
+/previous_chat.txt
+/commit_message.txt
 /.env
 .venv/
 .idea/

@@ -1,80 +1,101 @@
 from aiogram import types, Router, F
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
 from aiogram.filters import Command
-from downloader import download_video, cleanup
+from downloader import download_mp3, download_mp4, cleanup
+from states import Conversation
 import logging
-import datetime
-import os
-
+import re
 
 # Use a Router for handler registration
 router = Router()
 
-class Download(StatesGroup):
-    waiting_for_url = State()
+# Regex to validate YouTube URLs
+YOUTUBE_URL_REGEX = r'(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?]{11})'
 
 @router.message(Command("start"))
-async def start(message: types.Message):
-    """Handles the /start command."""
-    await message.reply("Hi! Send me a YouTube URL to download the video. Use /mp3 or /mp4 to specify the format.")
+async def start(message: types.Message, state: FSMContext):
+    """Handles the /start command and sets the state to wait for a link."""
+    await state.set_state(Conversation.WAITING_FOR_LINK)
+    await message.reply("🎬 Send me a YouTube link to download!")
 
-@router.message(Command("mp3"))
-async def handle_mp3(message: types.Message, state: FSMContext):
-    """Handles the /mp3 command."""
-    await state.set_state(Download.waiting_for_url)
-    await state.update_data(format='mp3')
-    await message.reply("Please send me the YouTube URL.")
+@router.message(Conversation.WAITING_FOR_LINK, F.text)
+async def handle_link(message: types.Message, state: FSMContext):
+    """Handles receiving the YouTube link."""
+    if not re.match(YOUTUBE_URL_REGEX, message.text):
+        await message.reply("That doesn't look like a valid YouTube link. Please try again.")
+        return
 
-@router.message(Command("mp4"))
-async def handle_mp4(message: types.Message, state: FSMContext):
-    """Handles the /mp4 command."""
-    await state.set_state(Download.waiting_for_url)
-    await state.update_data(format='mp4')
-    await message.reply("Please send me the YouTube URL.")
+    await state.update_data(url=message.text)
+    await state.set_state(Conversation.WAITING_FOR_FORMAT)
 
-@router.message(Download.waiting_for_url, F.text)
-async def process_url(message: types.Message, state: FSMContext):
-    """Processes the YouTube URL."""
+    keyboard = types.ReplyKeyboardMarkup(
+        keyboard=[
+            [types.KeyboardButton(text="MP3")],
+            [types.KeyboardButton(text="MP4")]
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    await message.reply("Choose the format:", reply_markup=keyboard)
+
+@router.message(Conversation.WAITING_FOR_FORMAT, F.text == "MP3")
+async def handle_mp3_selection(message: types.Message, state: FSMContext):
+    """Handles the MP3 format selection."""
     data = await state.get_data()
-    format_type = data.get('format', 'mp4')
-    url = message.text
-
-    # Clear state immediately
+    url = data.get("url")
     await state.clear()
+    
+    # Remove the keyboard
+    await message.reply("Downloading MP3...", reply_markup=types.ReplyKeyboardRemove())
 
     try:
-        sent_message = await message.reply("Downloading...")
-        output_file, video_title = download_video(url, format_type)
+        sent_message = await message.answer("Processing...")
+        output_file, video_title = download_mp3(url)
         
-        # Use FSInputFile to send local files
         input_file = types.FSInputFile(output_file)
-
-        if format_type == 'mp3':
-            await message.reply_audio(input_file, title=video_title)
-        else:
-            await message.reply_video(input_file, caption=video_title)
+        await message.reply_audio(input_file, title=video_title)
         
         await sent_message.delete()
-        
-        # Construct a log message
-        log_message = (
-            f"Timestamp: {datetime.datetime.now()}, "
-            f"URL: {url}, "
-            f"Format: {format_type}, "
-            f"Size: {os.path.getsize(output_file)} bytes"
-        )
-        logging.info(log_message)
-        
-        # The original video file might have a different extension if yt-dlp chose a different format
-        # Be robust in cleaning up
-        base_filename, _ = os.path.splitext(output_file)
-        cleanup(output_file, f"{base_filename}.mp4", f"{base_filename}.m4a", f"{base_filename}.webm")
-
+        cleanup(output_file)
 
     except ValueError as e:
         await message.reply(str(e))
     except Exception as e:
-        logging.error(f"Error processing {url}: {e}")
+        logging.error(f"Error processing {url} for MP3: {e}")
         await message.reply("An error occurred while processing your request.")
+    finally:
+        await state.clear()
 
+
+@router.message(Conversation.WAITING_FOR_FORMAT, F.text == "MP4")
+async def handle_mp4_selection(message: types.Message, state: FSMContext):
+    """Handles the MP4 format selection."""
+    data = await state.get_data()
+    url = data.get("url")
+    await state.clear()
+
+    # Remove the keyboard
+    await message.reply("Downloading MP4...", reply_markup=types.ReplyKeyboardRemove())
+
+    try:
+        sent_message = await message.answer("Processing...")
+        output_file, video_title = download_mp4(url)
+        
+        input_file = types.FSInputFile(output_file)
+        await message.reply_video(input_file, caption=video_title)
+        
+        await sent_message.delete()
+        cleanup(output_file)
+
+    except ValueError as e:
+        await message.reply(str(e))
+    except Exception as e:
+        logging.error(f"Error processing {url} for MP4: {e}")
+        await message.reply("An error occurred while processing your request.")
+    finally:
+        await state.clear()
+
+@router.message(Conversation.WAITING_FOR_FORMAT)
+async def handle_invalid_format_selection(message: types.Message):
+    """Handles invalid selections when waiting for a format."""
+    await message.reply("Invalid selection. Please choose either MP3 or MP4 from the keyboard.")
