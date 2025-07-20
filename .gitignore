@@ -1,2 +1,6 @@
 /cookies.txt
 /.env
+.venv/
+.idea/
+__pycache__/
+/*.mp4
