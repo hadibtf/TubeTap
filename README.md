@@ -1,104 +1,156 @@
-# YouTube Downloader Telegram Bot
 
-A simple yet powerful Telegram bot built with Python and `aiogram` to download YouTube videos as MP4 or MP3 files. It uses `yt-dlp` for downloading and `ffmpeg` for media conversion.
+# TubeTap 🎧
+
+A Telegram bot built with Python that lets you download YouTube audio (MP3) or video (MP4) on demand.  
+It uses **aiogram** for Telegram integration and **yt-dlp** + **FFmpeg** for media handling.  
+Supports restricted content via cookie-based authentication.
+
+---
+
+## 📋 Table of Contents
+
+- [Features](#features)  
+- [Prerequisites](#prerequisites)  
+- [1. BotFather & Bot Token](#1-botfather--bot-token)  
+- [2. Local Setup](#2-local-setup)  
+- [3. Cookie Authentication](#3-cookie-authentication)  
+- [4. Running Locally](#4-running-locally)  
+- [5. VPS Deployment Guide](#5-vps-deployment-guide)  
+  - [5.1 System Installation (Ubuntu)](#51-system-installation-ubuntu)  
+  - [5.2 Install Google Chrome](#52-install-google-chrome)  
+  - [5.3 Deploy & Run](#53-deploy--run)  
+- [6. Usage](#6-usage)  
+- [7. Troubleshooting](#7-troubleshooting)  
+- [8. Git Workflow & Contributing](#8-git-workflow--contributing)  
+- [9. License](#9-license)
+
+---
 
 ## Features
 
-- **YouTube Video Downloading**: Fetches videos directly from any valid YouTube URL.
-- **MP3 Audio Conversion**: Extracts and converts video content to high-quality MP3 audio.
-- **MP4 Video Output**: Provides direct downloads of videos in MP4 format.
-- **Duration Limit**: Politely rejects videos longer than 10 minutes to conserve resources.
-- **User-Friendly Interaction**:
-  - Sends a "Downloading..." message to acknowledge the request.
-  - Replaces the status message with the final file upon completion.
-- **Request Logging**: Logs every download request to standard output with a timestamp, URL, and file size for easy monitoring.
-- **Modular Architecture**: The code is cleanly organized into separate modules for bot logic, message handling, and download processing.
+- **MP3 Download**: Extract audio from YouTube links.  
+- **MP4 Download**: Save full video in MP4 format.  
+- **Restricted Content**: Use your own `cookies.txt` to download age‑restricted or sign‑in‑required videos.  
+- **Clean FSM Flow**: `/start` → send link → choose MP3/MP4 → receive file.  
+
+---
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed on your system (e.g., a Debian VM):
+Before you begin, ensure you have:
 
-- **Python 3.8+**
-- **pip** (Python package installer)
-- **FFmpeg**: A command-line tool for handling multimedia data.
+- **Python 3.8+**  
+- **Git**  
+- **Virtualenv support** (`python3-venv`)  
+- **FFmpeg** (for merging audio/video)  
+- **A Telegram account**  
 
-## Installation & Setup
+---
 
-Follow these steps to get the bot up and running.
+## 1. BotFather & Bot Token
 
-### 1. Clone the Repository
+1. Open Telegram and search for **@BotFather**.  
+2. Send `/newbot` and follow prompts:
+3. BotFather will reply with your **API token**.
+4. Copy that token — you’ll need it in Step 2.
 
-First, get the project files onto your machine. If you have git installed:
+---
+
+## 2. Local Setup
+
 ```bash
-git clone <repository-url>
-cd <repository-directory>
-```
-If not, simply download the source files (`main.py`, `handlers.py`, `downloader.py`, `requirements.txt`, `.env`) into a new directory.
-
-### 2. Install FFmpeg
-
-On Debian-based systems like Ubuntu, you can install FFmpeg with `apt`:
-```bash
-sudo apt-get update
-sudo apt-get install ffmpeg
-```
-For other operating systems, please refer to the [official FFmpeg download page](https://ffmpeg.org/download.html).
-
-### 3. Install Python Dependencies
-
-Install all the required Python libraries using the `requirements.txt` file:
-```bash
+git clone https://github.com/hadibtf/TubeTap.git
+cd TubeTap
+python3 -m venv .venv
+source .venv/bin/activate        # macOS/Linux
+.\.venv\Scripts\activate         # Windows PowerShell
 pip install -r requirements.txt
 ```
 
-### 4. Configure the Bot Token
+Create `.env` file with:
 
-The bot requires a Telegram Bot Token to authenticate with the Telegram API.
-
-1.  **Get a Token**: Talk to the [BotFather](https://t.me/BotFather) on Telegram to create a new bot and receive your unique token.
-2.  **Set the Token**: Open the `.env` file and replace `YOUR_BOT_TOKEN` with the token you received.
-    ```env
-    BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123456789
-    ```
-
-## How to Run the Bot
-
-Once the setup is complete, you can start the bot with a single command:
-
-```bash
-python3 main.py
-```
-
-If everything is configured correctly, you will see the log message "Starting bot..." in your terminal. The bot is now active and listening for messages.
-
-## How to Use the Bot
-
-Open a chat with your bot on Telegram and use the following commands:
-
--   **`/start`**
-    Displays a welcome message.
-
--   **`/mp3`**
-    The bot will ask for a YouTube URL. Send the URL in the next message, and the bot will download the video and send it back as an MP3 audio file.
-
--   **`/mp4`**
-    The bot will ask for a YouTube URL. Send the URL in the next message, and the bot will download the video and send it back as an MP4 video file.
-
-If you send a URL for a video that is longer than 10 minutes, the bot will respond with a message indicating that the video is too long and will not proceed with the download.
-
-## Project Structure
-
-The project is organized into several files to keep the code clean and maintainable:
-
-```
-.
-├── .env              # Stores environment variables like the BOT_TOKEN
-├── main.py           # The main entry point of the application. Initializes and starts the bot.
-├── handlers.py       # Defines all message handlers and bot command logic.
-├── downloader.py     # Contains functions for downloading videos and converting them with yt-dlp/ffmpeg.
-└── requirements.txt  # Lists all Python dependencies for the project.
+```env
+BOT_TOKEN=your_botfather_token_here
 ```
 
 ---
 
-Feel free to fork this project, submit issues, and contribute to its development.
+## 3. Cookie Authentication
+
+Use the **Get cookies.txt** browser extension (Chrome or Brave), export, and save as `cookies.txt`.
+
+---
+
+## 4. Running Locally
+
+```bash
+python main.py
+```
+
+---
+
+## 5. VPS Deployment Guide
+
+### 5.1 System Installation (Ubuntu)
+
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install python3 python3-venv python3-pip git ffmpeg -y
+```
+
+### 5.2 Install Google Chrome
+
+```bash
+wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+sudo apt install ./google-chrome-stable_current_amd64.deb -y
+```
+
+### 5.3 Deploy & Run
+
+```bash
+cd ~
+git clone https://github.com/hadibtf/TubeTap.git
+cd TubeTap
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+nohup python main.py > bot.log 2>&1 &
+```
+
+---
+
+## 6. Usage
+
+1. Send YouTube link  
+2. Bot asks format  
+3. Choose MP3 or MP4  
+4. Receive file  
+
+---
+
+## 7. Troubleshooting
+
+- Install FFmpeg  
+- Use correct `.env` format  
+- Update cookies regularly  
+
+---
+
+## 8. Git Workflow & Contributing
+
+```bash
+git checkout dev
+git checkout -b feature/your-feature-name
+# code...
+git add .
+git commit -m "feat: your feature"
+git push -u origin feature/your-feature-name
+```
+
+Then open a PR to `dev`.
+
+---
+
+## 9. License
+
+MIT © TubeTap contributors  
